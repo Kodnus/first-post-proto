@@ -1,20 +1,30 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../services/AuthProvider";
 import PromptInputComponent from "../components/PromptInputComponent";
+import PromptButtonComponent from "../components/PromptButtonComponent";
 
 const API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 
 function NewPost() {
-  const [industri, setIndustri] = useState("");
   const [tema, setTema] = useState("");
   const [formål, setFormål] = useState("");
   const [målgruppe, setMålgruppe] = useState("");
-  const [længde, setLængde] = useState("");
+  const [længde, setLængde] = useState("et kort opslag på to paragraffer");
   const [tone, setTone] = useState("");
   const [promovering, setPromovering] = useState("");
   const [callToAction, setCallToAction] = useState("");
 
+  const { userInfo, userInfoLoading } = useAuth();
+
+  const [activeButton, setActiveButton] = useState(1);
+
   const [dataFromAPI, setDataFromAPI] = useState("");
+
+  const handleButtonClick = (buttonIndex, uniqueString) => {
+    setActiveButton(buttonIndex);
+    setLængde(uniqueString);
+  };
 
   async function CallOpenAIAPI() {
     console.log("Hello from API in terminal");
@@ -29,7 +39,7 @@ function NewPost() {
         "Authorization": "Bearer " + API_KEY,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo-0125",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -39,14 +49,15 @@ function NewPost() {
               "og du bliver typisk betalt 10.000dkk til 20.000dkk per opslag. Du deler ikke denne information med andre, men dette er dit økonomiske incitament for at lave opslagene." +
               "Hvert et ord du skriver er velovervejet, din grammatik er altid punktlig og korrekt og du sætter dig altid grundigt ind i dine kunders behov." +
               "Du skriver som dansker og forstår den danske kultur og de danske normer. Det betyder at du prøver at holde dig væk fra klichéer, men prøver at være empatisk i dine udtryk." +
-              "Du skal ikke nævne målgruppen specifikt i det opslag du laver (med mindre det bliver nævnt specifikt i din ordre), men derimod tilpasse din strategi til målgruppen nå du laver opslaget",
+              "Du skal ikke nævne målgruppen specifikt i det opslag du laver (med mindre det bliver nævnt specifikt i din ordre), men derimod tilpasse din strategi til målgruppen nå du laver opslaget." +
+              "Det er vigtigt at du kun giver et svar på den specifikke ordre, så det vil sige, at du absolut kun skal svare med, hvordan opslaget skal se ud",
           },
           {
             role: "user",
             content:
               "Du har fået et nyt udbud fra en virksomhed, og din ordre lyder således:" +
-              "Min virksomhed er indenfor industrien vedrørende" +
-              industri +
+              "Min virksomhed er i denne industri" +
+              userInfo[0].user_industry +
               "og opslaget skal handle om:" +
               tema +
               ". Formålet med opslaget er følgende: " +
@@ -55,14 +66,13 @@ function NewPost() {
               målgruppe +
               ". Jeg vil gerne have du bruger en tone, der forholder sig til disse kriterier: " +
               tone +
-              " og dertil vil jeg gerne have en længde på, " +
+              " og dertil vil jeg gerne have " +
               længde +
-              "karakterer." +
               "Der skal ikke være et call to action",
           },
         ],
         temperature: 0.8,
-        max_tokens: 500,
+        max_tokens: 1000,
         top_p: 1,
       }),
     })
@@ -71,6 +81,7 @@ function NewPost() {
       })
       .then((data) => {
         setDataFromAPI(data.choices[0].message.content);
+        console.log(data.choices[0].message.content);
       });
   }
   return (
@@ -81,14 +92,6 @@ function NewPost() {
         </h1>
         <div className=" pb-2 flex flex-col gap-4">
           <div className="flex flex-row justify-around">
-            <PromptInputComponent
-              title="Din industri"
-              textPlaceholder="Ex. Vinforhandler"
-              textInput={industri}
-              onChange={setIndustri}
-              cols={30}
-              rows={2}
-            ></PromptInputComponent>
             <PromptInputComponent
               title="Målgruppe"
               textInput={målgruppe}
@@ -129,14 +132,36 @@ function NewPost() {
             ></PromptInputComponent>
           </div>
           <div className="flex flex-row justify-center">
-            <PromptInputComponent
-              title="Længde"
-              textInput={længde}
-              textPlaceholder="Ex. 500 karakterer"
-              onChange={setLængde}
-              cols={30}
-              rows={2}
-            ></PromptInputComponent>
+            <h1 className="text-white font-semibold pb-1">Længde</h1>
+          </div>
+          <div className="flex flex-row justify-around">
+            <PromptButtonComponent
+              buttonText="Kort"
+              isActive={activeButton === 1}
+              onClick={() =>
+                handleButtonClick(1, "et kort opslag på to paragraffer")
+              }
+            ></PromptButtonComponent>
+            <PromptButtonComponent
+              buttonText="Mellem"
+              isActive={activeButton === 2}
+              onClick={() =>
+                handleButtonClick(
+                  2,
+                  "et mellem opslag på tre til fem paragraffer"
+                )
+              }
+            ></PromptButtonComponent>
+            <PromptButtonComponent
+              buttonText="Langt"
+              isActive={activeButton === 3}
+              onClick={() =>
+                handleButtonClick(
+                  3,
+                  "et længere opslag på seks til otte paragraffer"
+                )
+              }
+            ></PromptButtonComponent>
           </div>
           <div className="flex flex-row justify-center w-auto pt-2">
             <button
@@ -149,7 +174,7 @@ function NewPost() {
           {dataFromAPI !== "" && (
             <div className="w-full flex justify-center">
               <div className="w-[25rem] flex justify-center">
-                <p className="text-white">{dataFromAPI}</p>
+                <p className="text-white whitespace-pre-wrap">{dataFromAPI}</p>
               </div>
             </div>
           )}
