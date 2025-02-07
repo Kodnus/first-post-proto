@@ -1,3 +1,5 @@
+.env is deleted but still visible in history. They key is not active anylonger, so there are no data breaches
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
